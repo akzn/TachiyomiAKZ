@@ -94,7 +94,7 @@ class EhLoginActivity : BaseViewBindingActivity<EhActivityLoginBinding>() {
                 }
             }
         } else {
-            binding.webview.restoreState(bundle)
+            binding.webview.restoreState(bundle!!)
         }
 
         if (bundle == null) {
@@ -145,7 +145,7 @@ class EhLoginActivity : BaseViewBindingActivity<EhActivityLoginBinding>() {
         }
     }
 
-    fun openIgneousDialog() {
+    private fun openIgneousDialog() {
         var igneous: CharSequence? = null
         MaterialDialog(this)
             .title(R.string.custom_igneous_cookie)

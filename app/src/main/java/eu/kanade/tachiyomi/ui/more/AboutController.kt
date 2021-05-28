@@ -12,15 +12,15 @@ import eu.kanade.tachiyomi.data.updater.UpdateResult
 import eu.kanade.tachiyomi.data.updater.UpdaterService
 import eu.kanade.tachiyomi.data.updater.github.GithubUpdateChecker
 import eu.kanade.tachiyomi.ui.base.controller.DialogController
-import eu.kanade.tachiyomi.ui.base.controller.openInBrowser
+import eu.kanade.tachiyomi.ui.base.controller.NoToolbarElevationController
 import eu.kanade.tachiyomi.ui.main.WhatsNewDialogController
 import eu.kanade.tachiyomi.ui.setting.SettingsController
 import eu.kanade.tachiyomi.util.CrashLogUtil
 import eu.kanade.tachiyomi.util.lang.launchNow
 import eu.kanade.tachiyomi.util.lang.toDateTimestampString
+import eu.kanade.tachiyomi.util.preference.add
 import eu.kanade.tachiyomi.util.preference.onClick
 import eu.kanade.tachiyomi.util.preference.preference
-import eu.kanade.tachiyomi.util.preference.preferenceCategory
 import eu.kanade.tachiyomi.util.preference.titleRes
 import eu.kanade.tachiyomi.util.system.copyToClipboard
 import eu.kanade.tachiyomi.util.system.toast
@@ -32,7 +32,7 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
 
-class AboutController : SettingsController() {
+class AboutController : SettingsController(), NoToolbarElevationController {
 
     private val updateChecker by lazy { GithubUpdateChecker() }
 
@@ -43,21 +43,23 @@ class AboutController : SettingsController() {
     override fun setupPreferenceScreen(screen: PreferenceScreen) = screen.apply {
         titleRes = R.string.pref_category_about
 
+        add(MoreHeaderPreference(context))
+
         preference {
             key = "pref_about_version"
             titleRes = R.string.version
             summary = if (BuildConfig.DEBUG /* SY --> */ || syDebugVersion != "0" /* SY --> */) {
-                "Preview r$syDebugVersion (${BuildConfig.COMMIT_SHA})"
+                "Preview r$syDebugVersion (${BuildConfig.COMMIT_SHA}, ${getFormattedBuildTime()})"
             } else {
-                "Stable ${BuildConfig.VERSION_NAME}"
+                "Stable ${BuildConfig.VERSION_NAME} (${getFormattedBuildTime()})"
             }
 
-            onClick { copyDebugInfo() }
-        }
-        preference {
-            key = "pref_about_build_time"
-            titleRes = R.string.build_time
-            summary = getFormattedBuildTime()
+            onClick {
+                activity?.let {
+                    val deviceInfo = CrashLogUtil(it).getDebugInfo()
+                    it.copyToClipboard("Debug information", deviceInfo)
+                }
+            }
         }
         if (isUpdaterEnabled) {
             preference {
@@ -77,82 +79,21 @@ class AboutController : SettingsController() {
                 // SY <--
             }
         }
-
-        preferenceCategory {
-            preference {
-                key = "pref_about_website"
-                titleRes = R.string.website
-                "https://tachiyomi.org".also {
-                    summary = it
-                    onClick { openInBrowser(it) }
-                }
-            }
-            preference {
-                key = "pref_about_facebook"
-                title = "Facebook"
-                "https://facebook.com/tachiyomiorg".also {
-                    summary = it
-                    onClick { openInBrowser(it) }
-                }
-            }
-            preference {
-                key = "pref_about_twitter"
-                title = "Twitter"
-                "https://twitter.com/tachiyomiorg".also {
-                    summary = it
-                    onClick { openInBrowser(it) }
-                }
-            }
-            preference {
-                key = "pref_about_discord"
-                title = "Discord"
-                "https://discord.gg/tachiyomi".also {
-                    summary = it
-                    onClick { openInBrowser(it) }
-                }
-            }
-            preference {
-                key = "pref_about_github"
-                title = "GitHub"
-                // SY -->
-                "https://github.com/jobobby04/TachiyomiSY".also {
-                    summary = it
-                    onClick { openInBrowser(it) }
-                }
-                // SY <--
-            }
-            // SY -->
-            preference {
-                key = "pref_about_label_original_tachiyomi_github"
-                title = "Original Tachiyomi GitHub "
-                "https://github.com/tachiyomiorg".also {
-                    summary = it
-                    onClick { openInBrowser(it) }
-                }
-            }
-            // SY <--
-            preference {
-                key = "pref_about_label_extensions"
-                titleRes = R.string.label_extensions
-                "https://github.com/tachiyomiorg/tachiyomi-extensions".also {
-                    summary = it
-                    onClick { openInBrowser(it) }
-                }
-            }
-            preference {
-                key = "pref_about_licenses"
-                titleRes = R.string.licenses
-                onClick {
-                    LibsBuilder()
-                        .withActivityTitle(activity!!.getString(R.string.licenses))
-                        .withAboutIconShown(false)
-                        .withAboutVersionShown(false)
-                        .withLicenseShown(true)
-                        .withEdgeToEdge(true)
-                        .start(activity!!)
-                }
+        preference {
+            key = "pref_about_licenses"
+            titleRes = R.string.licenses
+            onClick {
+                LibsBuilder()
+                    .withActivityTitle(activity!!.getString(R.string.licenses))
+                    .withAboutIconShown(false)
+                    .withAboutVersionShown(false)
+                    .withLicenseShown(true)
+                    .withEdgeToEdge(true)
+                    .start(activity!!)
             }
         }
+
+        add(AboutLinksPreference(context))
     }
 
     /**
@@ -208,13 +149,6 @@ class AboutController : SettingsController() {
         private companion object {
             const val BODY_KEY = "NewUpdateDialogController.body"
             const val URL_KEY = "NewUpdateDialogController.key"
-        }
-    }
-
-    private fun copyDebugInfo() {
-        activity?.let {
-            val deviceInfo = CrashLogUtil(it).getDebugInfo()
-            activity?.copyToClipboard("Debug information", deviceInfo)
         }
     }
 

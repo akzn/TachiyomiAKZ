@@ -2,8 +2,10 @@ package eu.kanade.tachiyomi.ui.reader
 
 import android.app.Application
 import android.content.Context
+import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.os.Environment
+import androidx.annotation.ColorInt
 import com.jakewharton.rxrelay.BehaviorRelay
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.cache.CoverCache
@@ -28,6 +30,7 @@ import eu.kanade.tachiyomi.ui.reader.model.ReaderPage
 import eu.kanade.tachiyomi.ui.reader.model.ViewerChapters
 import eu.kanade.tachiyomi.ui.reader.setting.OrientationType
 import eu.kanade.tachiyomi.ui.reader.setting.ReadingModeType
+import eu.kanade.tachiyomi.util.chapter.getChapterSort
 import eu.kanade.tachiyomi.util.isLocal
 import eu.kanade.tachiyomi.util.lang.byteSize
 import eu.kanade.tachiyomi.util.lang.launchIO
@@ -125,31 +128,24 @@ class ReaderPresenter(
         val selectedChapter = dbChapters.find { it.id == chapterId }
             ?: error("Requested chapter of id $chapterId not found in chapter list")
 
-        val chaptersForReader =
-            if (preferences.skipRead() || preferences.skipFiltered()) {
-                val list = dbChapters
-                    .filter {
-                        if (preferences.skipRead() && it.read) {
-                            return@filter false
-                        } else if (preferences.skipFiltered()) {
-                            if (
-                                (manga.readFilter == Manga.CHAPTER_SHOW_READ && !it.read) ||
+        val chaptersForReader = when {
+            (preferences.skipRead() || preferences.skipFiltered()) -> {
+                val list = dbChapters.filterNot {
+                    when {
+                        preferences.skipRead() && it.read -> true
+                        preferences.skipFiltered() -> {
+                            (manga.readFilter == Manga.CHAPTER_SHOW_READ && !it.read) ||
                                 (manga.readFilter == Manga.CHAPTER_SHOW_UNREAD && it.read) ||
-                                (
-                                    manga.downloadedFilter == Manga.CHAPTER_SHOW_DOWNLOADED &&
-                                        !downloadManager.isChapterDownloaded(it, manga)
-                                    ) ||
+                                (manga.downloadedFilter == Manga.CHAPTER_SHOW_DOWNLOADED && !downloadManager.isChapterDownloaded(it, manga)) ||
+                                (manga.downloadedFilter == Manga.CHAPTER_SHOW_NOT_DOWNLOADED && downloadManager.isChapterDownloaded(it, manga)) ||
                                 (manga.bookmarkedFilter == Manga.CHAPTER_SHOW_BOOKMARKED && !it.bookmark) ||
                                 // SY -->
                                 (filteredScanlators != null && MdUtil.getScanlators(it.scanlator).none { group -> filteredScanlators.contains(group) })
-                                // SY <--
-                            ) {
-                                return@filter false
-                            }
+                            // SY <--
                         }
-
-                        true
+                        else -> false
                     }
+                }
                     .toMutableList()
 
                 val find = list.find { it.id == chapterId }
@@ -157,16 +153,13 @@ class ReaderPresenter(
                     list.add(selectedChapter)
                 }
                 list
-            } else {
-                dbChapters
             }
+            else -> dbChapters
+        }
 
-        when (manga.sorting) {
-            Manga.CHAPTER_SORTING_SOURCE -> ChapterLoadBySource().get(chaptersForReader)
-            Manga.CHAPTER_SORTING_NUMBER -> ChapterLoadByNumber().get(chaptersForReader, selectedChapter)
-            Manga.CHAPTER_SORTING_UPLOAD_DATE -> ChapterLoadByUploadDate().get(chaptersForReader)
-            else -> error("Unknown sorting method")
-        }.map(::ReaderChapter)
+        chaptersForReader
+            .sortedWith(getChapterSort(manga, sortDescending = false))
+            .map(::ReaderChapter)
     }
 
     private var hasTrackers: Boolean = false
@@ -599,15 +592,19 @@ class ReaderPresenter(
      * Returns the viewer position used by this manga or the default one.
      */
     fun getMangaReadingMode(resolveDefault: Boolean = true): Int {
-        val manga = manga ?: return preferences.defaultReadingMode()
+        val default = preferences.defaultReadingMode()
+        val manga = manga ?: return default
+        val readingMode = ReadingModeType.fromPreference(manga.readingModeType)
         // SY -->
         return when {
-            resolveDefault && manga.readingModeType == ReadingModeType.DEFAULT.flagValue && preferences.useAutoWebtoon().get() -> {
-                manga.defaultReaderType(manga.mangaType(sourceName = sourceManager.get(manga.source)?.name)) ?: if (manga.readingModeType == ReadingModeType.DEFAULT.flagValue) preferences.defaultReadingMode() else manga.readingModeType
+            resolveDefault && readingMode == ReadingModeType.DEFAULT && preferences.useAutoWebtoon().get() -> {
+                manga.defaultReaderType(manga.mangaType(sourceName = sourceManager.get(manga.source)?.name)) ?: if (manga.readingModeType == ReadingModeType.DEFAULT.flagValue) {
+                    default
+                } else {
+                    readingMode.prefValue
+                }
             }
-            resolveDefault && manga.readingModeType == ReadingModeType.DEFAULT.flagValue -> {
-                preferences.defaultReadingMode()
-            }
+            resolveDefault && readingMode == ReadingModeType.DEFAULT -> default
             else -> manga.readingModeType
         }
         // SY <--
@@ -729,6 +726,70 @@ class ReaderPresenter(
             )
     }
 
+    // SY -->
+    fun saveImages(firstPage: ReaderPage, secondPage: ReaderPage, isLTR: Boolean, @ColorInt bg: Int) {
+        if (firstPage.status != Page.READY) return
+        if (secondPage.status != Page.READY) return
+        val manga = manga ?: return
+        val context = Injekt.get<Application>()
+
+        val notifier = SaveImageNotifier(context)
+        notifier.onClear()
+
+        // Pictures directory.
+        val destDir = File(
+            Environment.getExternalStorageDirectory().absolutePath +
+                File.separator + Environment.DIRECTORY_PICTURES +
+                File.separator + context.getString(R.string.app_name)
+        )
+
+        // Copy file in background.
+        Observable.fromCallable { saveImages(firstPage, secondPage, isLTR, bg, destDir, manga) }
+            .doOnNext { file ->
+                DiskUtil.scanMedia(context, file)
+                notifier.onComplete(file)
+            }
+            .doOnError { notifier.onError(it.message) }
+            .subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribeFirst(
+                { view, file -> view.onSaveImageResult(SaveImageResult.Success(file)) },
+                { view, error -> view.onSaveImageResult(SaveImageResult.Error(error)) }
+            )
+    }
+
+    private fun saveImages(page1: ReaderPage, page2: ReaderPage, isLTR: Boolean, @ColorInt bg: Int, directory: File, manga: Manga): File {
+        val stream1 = page1.stream!!
+        ImageUtil.findImageType(stream1) ?: throw Exception("Not an image")
+        val stream2 = page2.stream!!
+        ImageUtil.findImageType(stream2) ?: throw Exception("Not an image")
+        val imageBytes = stream1().readBytes()
+        val imageBitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+
+        val imageBytes2 = stream2().readBytes()
+        val imageBitmap2 = BitmapFactory.decodeByteArray(imageBytes2, 0, imageBytes2.size)
+
+        val stream = ImageUtil.mergeBitmaps(imageBitmap, imageBitmap2, isLTR, bg)
+        directory.mkdirs()
+
+        val chapter = page1.chapter.chapter
+
+        // Build destination file.
+        val filenameSuffix = " - ${page1.number}-${page2.number}.jpg"
+        val filename = DiskUtil.buildValidFilename(
+            "${manga.title} - ${chapter.name}".takeBytes(MAX_FILE_NAME_BYTES - filenameSuffix.byteSize())
+        ) + filenameSuffix
+
+        val destFile = File(directory, filename)
+        stream.use { input ->
+            destFile.outputStream().use { output ->
+                input.copyTo(output)
+            }
+        }
+        return destFile
+    }
+    // SY <--
+
     /**
      * Shares the image of this [page] and notifies the UI with the path of the file to share.
      * The image must be first copied to the internal partition because there are many possible
@@ -752,6 +813,26 @@ class ReaderPresenter(
                 { _, _ -> /* Empty */ }
             )
     }
+
+    // SY -->
+    fun shareImages(firstPage: ReaderPage, secondPage: ReaderPage, isLTR: Boolean, @ColorInt bg: Int) {
+        if (firstPage.status != Page.READY) return
+        if (secondPage.status != Page.READY) return
+        val manga = manga ?: return
+        val context = Injekt.get<Application>()
+
+        val destDir = File(context.cacheDir, "shared_image")
+
+        Observable.fromCallable { destDir.deleteRecursively() } // Keep only the last shared file
+            .map { saveImages(firstPage, secondPage, isLTR, bg, destDir, manga) }
+            .subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribeFirst(
+                { view, file -> view.onShareImageResult(file, firstPage, secondPage) },
+                { _, _ -> /* Empty */ }
+            )
+    }
+    // SY <--
 
     /**
      * Sets the image of this [page] as cover and notifies the UI of the result.

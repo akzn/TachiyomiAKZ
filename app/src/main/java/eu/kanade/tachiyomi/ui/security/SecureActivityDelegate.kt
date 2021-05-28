@@ -6,7 +6,7 @@ import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
 import eu.kanade.tachiyomi.data.preference.PreferencesHelper
 import eu.kanade.tachiyomi.ui.category.biometric.TimeRange
-import eu.kanade.tachiyomi.util.system.BiometricUtil
+import eu.kanade.tachiyomi.util.system.AuthenticatorUtil
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import uy.kohesive.injekt.injectLazy
@@ -36,31 +36,33 @@ class SecureActivityDelegate(private val activity: FragmentActivity) {
     }
 
     fun onResume() {
-        val lockApp = preferences.useBiometricLock().get()
-        if (lockApp && BiometricUtil.isSupported(activity)) {
-            if (isAppLocked()) {
-                val intent = Intent(activity, BiometricUnlockActivity::class.java)
-                activity.startActivity(intent)
-                activity.overridePendingTransition(0, 0)
+        if (preferences.useAuthenticator().get()) {
+            if (AuthenticatorUtil.isSupported(activity)) {
+                if (isAppLocked()) {
+                    activity.startActivity(Intent(activity, UnlockActivity::class.java))
+                    activity.overridePendingTransition(0, 0)
+                }
+            } else {
+                preferences.useAuthenticator().set(false)
             }
-        } else if (lockApp) {
-            preferences.useBiometricLock().set(false)
         }
     }
 
     @OptIn(ExperimentalTime::class)
     private fun isAppLocked(): Boolean {
-        return locked &&
-            (
-                preferences.lockAppAfter().get() <= 0 ||
-                    Date().time >= preferences.lastAppUnlock().get() + 60 * 1000 * preferences.lockAppAfter().get()
-                ) && preferences.biometricTimeRanges().get().mapNotNull { TimeRange.fromPreferenceString(it) }.let { timeRanges ->
-            if (timeRanges.isNotEmpty()) {
-                val today: Calendar = Calendar.getInstance()
-                val now = today.get(Calendar.HOUR_OF_DAY).hours + today.get(Calendar.MINUTE).minutes
-                timeRanges.any { now in it.startTime..it.endTime }
-            } else true
+        if (!locked) {
+            return false
         }
+
+        return preferences.lockAppAfter().get() <= 0 ||
+            Date().time >= preferences.lastAppUnlock().get() + 60 * 1000 * preferences.lockAppAfter().get() &&
+            preferences.authenticatorTimeRanges().get().mapNotNull { TimeRange.fromPreferenceString(it) }.let { timeRanges ->
+                if (timeRanges.isNotEmpty()) {
+                    val today: Calendar = Calendar.getInstance()
+                    val now = today.get(Calendar.HOUR_OF_DAY).hours + today.get(Calendar.MINUTE).minutes
+                    timeRanges.any { now in it.startTime..it.endTime }
+                } else true
+            }
     }
 
     companion object {

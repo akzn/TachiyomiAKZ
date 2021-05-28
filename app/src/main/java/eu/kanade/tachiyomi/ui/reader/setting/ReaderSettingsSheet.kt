@@ -1,28 +1,28 @@
 package eu.kanade.tachiyomi.ui.reader.setting
 
-import android.view.ViewGroup
-import com.google.android.material.bottomsheet.BottomSheetBehavior
+import android.os.Bundle
 import com.google.android.material.tabs.TabLayout
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.ui.reader.ReaderActivity
-import eu.kanade.tachiyomi.widget.SimpleTabSelectedListener
+import eu.kanade.tachiyomi.widget.listener.SimpleTabSelectedListener
 import eu.kanade.tachiyomi.widget.sheet.TabbedBottomSheetDialog
 
 class ReaderSettingsSheet(
     private val activity: ReaderActivity,
-    showColorFilterSettings: Boolean = false,
+    private val showColorFilterSettings: Boolean = false,
 ) : TabbedBottomSheetDialog(activity) {
 
     private val readingModeSettings = ReaderReadingModeSettings(activity)
     private val generalSettings = ReaderGeneralSettings(activity)
     private val colorFilterSettings = ReaderColorFilterSettings(activity)
 
-    private val sheetBackgroundDim = window?.attributes?.dimAmount ?: 0.25f
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
 
-    init {
-        val sheetBehavior = BottomSheetBehavior.from(binding.root.parent as ViewGroup)
         sheetBehavior.isFitToContents = false
         sheetBehavior.halfExpandedRatio = 0.25f
+
+        val sheetBackgroundDim = window?.attributes?.dimAmount ?: 0.25f
 
         val filterTabIndex = getTabViews().indexOf(colorFilterSettings)
         binding.tabs.addOnTabSelectedListener(object : SimpleTabSelectedListener() {

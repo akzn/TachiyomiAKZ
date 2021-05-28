@@ -20,6 +20,7 @@ import eu.kanade.tachiyomi.data.library.CustomMangaManager
 import eu.kanade.tachiyomi.data.preference.PreferencesHelper
 import eu.kanade.tachiyomi.data.track.TrackManager
 import eu.kanade.tachiyomi.data.track.TrackService
+import eu.kanade.tachiyomi.data.track.UnattendedTrackService
 import eu.kanade.tachiyomi.source.LocalSource
 import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.source.SourceManager
@@ -31,7 +32,9 @@ import eu.kanade.tachiyomi.ui.base.presenter.BasePresenter
 import eu.kanade.tachiyomi.ui.manga.chapter.ChapterItem
 import eu.kanade.tachiyomi.ui.manga.track.TrackItem
 import eu.kanade.tachiyomi.util.chapter.ChapterSettingsHelper
+import eu.kanade.tachiyomi.util.chapter.getChapterSort
 import eu.kanade.tachiyomi.util.chapter.syncChaptersWithSource
+import eu.kanade.tachiyomi.util.chapter.syncChaptersWithTrackServiceTwoWay
 import eu.kanade.tachiyomi.util.isLocal
 import eu.kanade.tachiyomi.util.lang.launchIO
 import eu.kanade.tachiyomi.util.lang.withUIContext
@@ -96,10 +99,9 @@ class MangaPresenter(
      */
     private var fetchMangaJob: Job? = null
 
-    /**
-     * List of chapters of the manga. It's always unfiltered and unsorted.
-     */
-    var chapters: List<ChapterItem> = emptyList()
+    var allChapters: List<ChapterItem> = emptyList()
+        private set
+    var filteredAndSortedChapters: List<ChapterItem> = emptyList()
         private set
 
     /**
@@ -195,7 +197,13 @@ class MangaPresenter(
         // Prepare the relay.
         chaptersRelay.flatMap { applyChapterFilters(it) }
             .observeOn(AndroidSchedulers.mainThread())
-            .subscribeLatestCache(MangaController::onNextChapters) { _, error -> Timber.e(error) }
+            .subscribeLatestCache(
+                { _, chapters ->
+                    filteredAndSortedChapters = chapters
+                    view?.onNextChapters(chapters)
+                },
+                { _, error -> Timber.e(error) }
+            )
 
         // Manga info - end
 
@@ -216,7 +224,7 @@ class MangaPresenter(
                     allChapterScanlators = chapters.flatMap { MdUtil.getScanlators(it.chapter.scanlator) }.toSet()
 
                     // Store the last emission
-                    this.chapters = chapters
+                    this.allChapters = chapters
 
                     // Listen for download status changes
                     observeDownloads()
@@ -802,7 +810,7 @@ class MangaPresenter(
      * Updates the UI after applying the filters.
      */
     private fun refreshChapters() {
-        chaptersRelay.call(chapters)
+        chaptersRelay.call(allChapters)
     }
 
     /**
@@ -841,25 +849,7 @@ class MangaPresenter(
         }
         // SY <--
 
-        return observable.toSortedList(getChapterSort())
-    }
-
-    fun getChapterSort(): (Chapter, Chapter) -> Int {
-        return when (manga.sorting) {
-            Manga.CHAPTER_SORTING_SOURCE -> when (sortDescending()) {
-                true -> { c1, c2 -> c1.source_order.compareTo(c2.source_order) }
-                false -> { c1, c2 -> c2.source_order.compareTo(c1.source_order) }
-            }
-            Manga.CHAPTER_SORTING_NUMBER -> when (sortDescending()) {
-                true -> { c1, c2 -> c2.chapter_number.compareTo(c1.chapter_number) }
-                false -> { c1, c2 -> c1.chapter_number.compareTo(c2.chapter_number) }
-            }
-            Manga.CHAPTER_SORTING_UPLOAD_DATE -> when (sortDescending()) {
-                true -> { c1, c2 -> c2.date_upload.compareTo(c1.date_upload) }
-                false -> { c1, c2 -> c1.date_upload.compareTo(c2.date_upload) }
-            }
-            else -> throw NotImplementedError("Unimplemented sorting method")
-        }
+        return observable.toSortedList(getChapterSort(manga))
     }
 
     /**
@@ -869,7 +859,7 @@ class MangaPresenter(
     private fun onDownloadStatusChange(download: Download) {
         // Assign the download to the model object.
         if (download.status == Download.State.QUEUE) {
-            chapters.find { it.id == download.chapter.id }?.let {
+            allChapters.find { it.id == download.chapter.id }?.let {
                 if (it.download == null) {
                     it.download = download
                 }
@@ -886,19 +876,39 @@ class MangaPresenter(
      * Returns the next unread chapter or null if everything is read.
      */
     fun getNextUnreadChapter(): ChapterItem? {
-        val chapters = chapters.sortedWith(getChapterSort())
         return if (source.isEhBasedSource()) {
             if (sortDescending()) {
-                chapters.firstOrNull()?.takeUnless { it.read }
+                filteredAndSortedChapters.firstOrNull()?.takeUnless { it.read }
             } else {
-                chapters.lastOrNull()?.takeUnless { it.read }
+                filteredAndSortedChapters.lastOrNull()?.takeUnless { it.read }
             }
         } else {
             if (sortDescending()) {
-                return chapters.findLast { !it.read }
+                return filteredAndSortedChapters.findLast { !it.read }
             } else {
-                chapters.find { !it.read }
+                filteredAndSortedChapters.find { !it.read }
             }
+        }
+    }
+
+    fun getUnreadChaptersSorted(): List<ChapterItem> {
+        val chapters = allChapters
+            .sortedWith(getChapterSort(manga))
+            .filter { !it.read && it.status == Download.State.NOT_DOWNLOADED }
+            .distinctBy { it.name }
+            // SY -->
+            .let {
+                if (source.isEhBasedSource()) {
+                    it.reversed()
+                } else {
+                    it
+                }
+            }
+        // SY <--
+        return if (sortDescending()) {
+            chapters.reversed()
+        } else {
+            chapters
         }
     }
 
@@ -1167,6 +1177,10 @@ class MangaPresenter(
                             async {
                                 val track = it.service.refresh(it.track!!)
                                 db.insertTrack(track).executeAsBlocking()
+
+                                if (it.service is UnattendedTrackService) {
+                                    syncChaptersWithTrackServiceTwoWay(db, allChapters, track, it.service)
+                                }
                             }
                         }
                         .awaitAll()
@@ -1200,6 +1214,10 @@ class MangaPresenter(
                 try {
                     service.bind(item)
                     db.insertTrack(item).executeAsBlocking()
+
+                    if (service is UnattendedTrackService) {
+                        syncChaptersWithTrackServiceTwoWay(db, allChapters, item, service)
+                    }
                 } catch (e: Throwable) {
                     this@MangaPresenter.xLogD("Error registering tracking", e)
                     withUIContext { view?.applicationContext?.toast(e.message) }

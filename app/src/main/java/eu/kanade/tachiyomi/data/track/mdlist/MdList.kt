@@ -45,8 +45,6 @@ class MdList(private val context: Context, id: Int) : TrackService(id) {
 
     override fun displayScore(track: Track) = track.score.toInt().toString()
 
-    override suspend fun add(track: Track): Track = update(track)
-
     override suspend fun update(track: Track): Track {
         return withIOContext {
             val mdex = mdex ?: throw MangaDexNotFoundException()
@@ -59,6 +57,8 @@ class MdList(private val context: Context, id: Int) : TrackService(id) {
             if (remoteTrack.status != followStatus.int) {
                 if (mdex.updateFollowStatus(MdUtil.getMangaId(track.tracking_url), followStatus)) {
                     remoteTrack.status = followStatus.int
+                } else {
+                    track.status = remoteTrack.status
                 }
             }
 

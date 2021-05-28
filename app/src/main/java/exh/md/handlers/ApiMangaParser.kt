@@ -18,12 +18,12 @@ import exh.metadata.metadata.base.insertFlatMetadata
 import exh.util.dropEmpty
 import exh.util.executeOnIO
 import exh.util.floor
+import exh.util.nullIfEmpty
 import okhttp3.OkHttpClient
 import okhttp3.Response
 import tachiyomi.source.model.ChapterInfo
 import tachiyomi.source.model.MangaInfo
 import uy.kohesive.injekt.injectLazy
-import java.util.Date
 import java.util.Locale
 
 class ApiMangaParser(val client: OkHttpClient, private val lang: String) {
@@ -72,14 +72,20 @@ class ApiMangaParser(val client: OkHttpClient, private val lang: String) {
                 val networkManga = networkApiManga.data.attributes
                 mdUuid = networkApiManga.data.id
                 title = MdUtil.cleanString(networkManga.title[lang] ?: networkManga.title["en"]!!)
-                altTitles = networkManga.altTitles.mapNotNull { it[lang] }
-                cover =
-                    if (coverUrls.isNotEmpty()) {
-                        coverUrls.last()
-                    } else {
-                        null
-                        // networkManga.mainCover
+                altTitles = networkManga.altTitles.mapNotNull { it[lang] }.nullIfEmpty()
+
+                val coverUrl = MdUtil.formThumbUrl(networkApiManga.data.id)
+                /*val coverUrlId = networkApiManga.relationships.firstOrNull { it.type == "cover_art" }?.id
+                if (coverUrlId != null) {
+                    runCatching {
+                        val json = client.newCall(GET(MdUtil.coverUrl(networkApiManga.data.id, coverUrlId))).await()
+                            .parseAs<CoverListResponse>(MdUtil.jsonParser)
+                        json.results.firstOrNull()?.data?.attributes?.fileName?.let { fileName ->
+                            coverUrl = "${MdUtil.cdnUrl}/covers/${networkApiManga.data.id}/$fileName"
+                        }
                     }
+                }*/
+                cover = coverUrl
 
                 description = MdUtil.cleanDescription(networkManga.description[lang] ?: networkManga.description["en"]!!)
 
@@ -131,16 +137,6 @@ class ApiMangaParser(val client: OkHttpClient, private val lang: String) {
                     links["ap"]?.let { animePlanetId = it }
                 }
 
-                if (kitsuId?.toIntOrNull() != null) {
-                    cover = "https://media.kitsu.io/manga/poster_images/$kitsuId/large.jpg"
-                }
-                if (cover == null && !myAnimeListId.isNullOrEmpty()) {
-                    cover = "https://coverapi.orell.dev/api/v1/mal/manga/$myAnimeListId/cover"
-                }
-                if (cover == null) {
-                    cover = "https://coverapi.orell.dev/api/v1/mdaltimage/manga/$mdUuid/cover"
-                }
-
                 // val filteredChapters = filterChapterForChecking(networkApiManga)
 
                 val tempStatus = parseStatus(networkManga.status ?: "")
@@ -155,8 +151,11 @@ class ApiMangaParser(val client: OkHttpClient, private val lang: String) {
 
                 // things that will go with the genre tags but aren't actually genre
                 val nonGenres = listOfNotNull(
-                    networkManga.publicationDemographic?.let { RaisedTag("Demographic", it.capitalize(Locale.US), MangaDexSearchMetadata.TAG_TYPE_DEFAULT) },
-                    networkManga.contentRating?.let { RaisedTag("Content Rating", it.capitalize(Locale.US), MangaDexSearchMetadata.TAG_TYPE_DEFAULT) },
+                    networkManga.publicationDemographic
+                        ?.let { RaisedTag("Demographic", it.capitalize(Locale.US), MangaDexSearchMetadata.TAG_TYPE_DEFAULT) },
+                    networkManga.contentRating
+                        ?.takeUnless { it == "safe" }
+                        ?.let { RaisedTag("Content Rating", it.capitalize(Locale.US), MangaDexSearchMetadata.TAG_TYPE_DEFAULT) },
                 )
 
                 val genres = nonGenres + networkManga.tags
@@ -239,7 +238,7 @@ class ApiMangaParser(val client: OkHttpClient, private val lang: String) {
     }
 
     fun chapterListParse(chapterListResponse: List<ChapterResponse>, groupMap: Map<String, String>): List<ChapterInfo> {
-        val now = Date().time
+        val now = System.currentTimeMillis()
 
         return chapterListResponse.asSequence()
             .map {

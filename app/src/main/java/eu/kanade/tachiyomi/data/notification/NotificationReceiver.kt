@@ -58,22 +58,22 @@ class NotificationReceiver : BroadcastReceiver() {
             ACTION_SHARE_IMAGE ->
                 shareImage(
                     context,
-                    intent.getStringExtra(EXTRA_FILE_LOCATION),
+                    intent.getStringExtra(EXTRA_FILE_LOCATION)!!,
                     intent.getIntExtra(EXTRA_NOTIFICATION_ID, -1)
                 )
             // Delete image from path and dismiss notification
             ACTION_DELETE_IMAGE ->
                 deleteImage(
                     context,
-                    intent.getStringExtra(EXTRA_FILE_LOCATION),
+                    intent.getStringExtra(EXTRA_FILE_LOCATION)!!,
                     intent.getIntExtra(EXTRA_NOTIFICATION_ID, -1)
                 )
             // Share backup file
             ACTION_SHARE_BACKUP ->
                 shareFile(
                     context,
-                    intent.getParcelableExtra(EXTRA_URI),
-                    if (intent.getBooleanExtra(EXTRA_IS_LEGACY_BACKUP, false)) "application/json" else "application/x-protobuf+gzip",
+                    intent.getParcelableExtra(EXTRA_URI)!!,
+                    "application/x-protobuf+gzip",
                     intent.getIntExtra(EXTRA_NOTIFICATION_ID, -1)
                 )
             ACTION_CANCEL_RESTORE -> cancelRestore(
@@ -106,7 +106,7 @@ class NotificationReceiver : BroadcastReceiver() {
             ACTION_SHARE_CRASH_LOG ->
                 shareFile(
                     context,
-                    intent.getParcelableExtra(EXTRA_URI),
+                    intent.getParcelableExtra(EXTRA_URI)!!,
                     "text/plain",
                     intent.getIntExtra(EXTRA_NOTIFICATION_ID, -1)
                 )
@@ -281,7 +281,6 @@ class NotificationReceiver : BroadcastReceiver() {
         private const val EXTRA_MANGA_ID = "$ID.$NAME.EXTRA_MANGA_ID"
         private const val EXTRA_CHAPTER_ID = "$ID.$NAME.EXTRA_CHAPTER_ID"
         private const val EXTRA_CHAPTER_URL = "$ID.$NAME.EXTRA_CHAPTER_URL"
-        private const val EXTRA_IS_LEGACY_BACKUP = "$ID.$NAME.EXTRA_IS_LEGACY_BACKUP"
 
         /**
          * Returns a [PendingIntent] that resumes the download of a chapter
@@ -494,11 +493,10 @@ class NotificationReceiver : BroadcastReceiver() {
          * @param notificationId id of notification
          * @return [PendingIntent]
          */
-        internal fun shareBackupPendingBroadcast(context: Context, uri: Uri, isLegacyFormat: Boolean, notificationId: Int): PendingIntent {
+        internal fun shareBackupPendingBroadcast(context: Context, uri: Uri, notificationId: Int): PendingIntent {
             val intent = Intent(context, NotificationReceiver::class.java).apply {
                 action = ACTION_SHARE_BACKUP
                 putExtra(EXTRA_URI, uri)
-                putExtra(EXTRA_IS_LEGACY_BACKUP, isLegacyFormat)
                 putExtra(EXTRA_NOTIFICATION_ID, notificationId)
             }
             return PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT)
