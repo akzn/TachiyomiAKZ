@@ -27,10 +27,10 @@
         app:iconTint="?attr/colorOnPrimary"
         app:showAsAction="ifRoom" />
 
-<!--    <item-->
-<!--        android:id="@+id/action_sync_favorites"-->
-<!--        android:icon="@drawable/ic_cloud_24dp"-->
-<!--        android:title="@string/sync_favorites"-->
-<!--        app:showAsAction="never"/>-->
+   <item
+        android:id="@+id/action_sync_favorites"
+        android:icon="@drawable/ic_cloud_24dp"
+        android:title="@string/sync_favorites"
+        app:showAsAction="never"/>
 
 </menu>
