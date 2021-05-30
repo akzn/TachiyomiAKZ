@@ -22,7 +22,7 @@ import kotlinx.coroutines.flow.onEach
 import java.io.File
 import java.text.DateFormat
 import java.text.SimpleDateFormat
-import java.util.Locale
+import java.util.*
 import eu.kanade.tachiyomi.data.preference.PreferenceKeys as Keys
 import eu.kanade.tachiyomi.data.preference.PreferenceValues as Values
 
@@ -500,4 +500,8 @@ class PreferencesHelper(val context: Context) {
     fun pageLayout() = flowPrefs.getInt(Keys.pageLayout, PagerConfig.PageLayout.AUTOMATIC)
 
     fun invertDoublePages() = flowPrefs.getBoolean(Keys.invertDoublePages, false)
+
+    // --> akz
+    fun isLastSourceRecsEnabled() = flowPrefs.getBoolean(Keys.eh_enableLastSourceRecommendation, false)
+    // <-- akz
 }

@@ -133,6 +133,10 @@
     <string name="log_level_summary">Changing this can impact app performance. Force-restart app after changing. Current value: %s</string>
     <string name="enable_source_blacklist">Enable source blacklist</string>
     <string name="enable_source_blacklist_summary">Hide extensions/sources that are incompatible with %1$s. Force-restart app after changing.</string>
+    <!-- AKZ -> -->
+    <string name="enable_last_source_for_recommendation">Enable last source Recommendation</string>
+    <string name="enable_last_source_for_recommendation_summary">Use last used extensions/sources to be used for Recommendation.</string>
+    <!-- <- AKZ -->
     <string name="open_debug_menu">Open debug menu</string>
     <string name="open_debug_menu_summary"><![CDATA[DO NOT TOUCH THIS MENU UNLESS YOU KNOW WHAT YOU ARE DOING! <font color=\'red\'>IT CAN CORRUPT YOUR LIBRARY!</font>]]></string>
     <string name="starting_cleanup">Starting cleanup</string>

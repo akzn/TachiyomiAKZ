@@ -303,6 +303,12 @@ object PreferenceKeys {
 
     const val eh_enable_hah = "eh_enable_hah"
 
+    // akz -->
+
+    const val eh_enableLastSourceRecommendation = "eh_enable_last_source_recommendation"
+
+    // <-- akz
+
     const val latest_tab_sources = "latest_tab_sources"
 
     const val latest_tab_position = "latest_tab_position"

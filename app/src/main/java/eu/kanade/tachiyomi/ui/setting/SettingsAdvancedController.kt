@@ -312,6 +312,17 @@ class SettingsAdvancedController : SettingsController() {
                 summary = context.getString(R.string.enable_source_blacklist_summary, context.getString(R.string.app_name))
             }
 
+            // akz -->
+
+            switchPreference {
+                titleRes = R.string.enable_last_source_for_recommendation
+                key = Keys.eh_enableLastSourceRecommendation
+                defaultValue = false
+                summary = context.getString(R.string.enable_last_source_for_recommendation_summary, context.getString(R.string.app_name))
+            }
+
+            // <-- akz
+
             preference {
                 key = "pref_open_debug_menu"
                 titleRes = R.string.open_debug_menu
