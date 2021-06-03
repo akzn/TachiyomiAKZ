@@ -193,7 +193,7 @@ class EHentai(
                         genre = getGenre(
                             genreString = parsedGenre?.text()
                                 ?.nullIfBlank()
-                                ?.toLowerCase()
+                                ?.lowercase()
                                 ?.replace(" ", "")
                         )
 
@@ -306,7 +306,7 @@ class EHentai(
                 doc = client.newCall(exGet(baseUrl + url)).await().asJsoup()
 
                 val parentLink = doc.select("#gdd .gdt1").find { el ->
-                    el.text().toLowerCase() == "parent:"
+                    el.text().lowercase() == "parent:"
                 }!!.nextElementSibling().selectFirst("a")?.attr("href")
 
                 if (parentLink != null) {
@@ -335,7 +335,7 @@ class EHentai(
             number = 1f,
             dateUpload = MetadataUtil.EX_DATE_FORMAT.parse(
                 doc.select("#gdd .gdt1").find { el ->
-                    el.text().toLowerCase() == "posted:"
+                    el.text().lowercase() == "posted:"
                 }!!.nextElementSibling().text()
             )!!.time
         )
@@ -419,6 +419,20 @@ class EHentai(
         exGet("$baseUrl/toplist.php?tl=15&p=${page - 1}", null) // Custom page logic for toplists
     }
 
+    private fun <T : MangasPage> Observable<T>.checkValid(): Observable<MangasPage> = map {
+        if (exh && it.mangas.isEmpty() && preferences.igneousVal().get().equals("mystery", true)) {
+            throw Exception("Invalid igneous cookie, try re-logging or finding a correct one to input in the login menu")
+        } else it
+    }
+
+    override fun fetchLatestUpdates(page: Int): Observable<MangasPage> {
+        return super.fetchLatestUpdates(page).checkValid()
+    }
+
+    override fun fetchPopularManga(page: Int): Observable<MangasPage> {
+        return super.fetchPopularManga(page).checkValid()
+    }
+
     // Support direct URL importing
     override fun fetchSearchManga(page: Int, query: String, filters: FilterList): Observable<MangasPage> =
         urlImportFetchSearchManga(context, query) {
@@ -426,7 +440,7 @@ class EHentai(
                 client.newCall(it).asObservableSuccess()
             }.map { response ->
                 searchMangaParse(response)
-            }
+            }.checkValid()
         }
 
     private fun searchMangaRequestObservable(page: Int, query: String, filters: FilterList): Observable<Request> {
@@ -593,7 +607,7 @@ class EHentai(
                     val right = rightElement.text().trimOrNull()
                     if (left != null && right != null) {
                         ignore {
-                            when (left.removeSuffix(":").toLowerCase()) {
+                            when (left.removeSuffix(":").lowercase()) {
                                 "posted" -> datePosted = MetadataUtil.EX_DATE_FORMAT.parse(right)!!.time
                                 // Example gallery with parent: https://e-hentai.org/g/1390451/7f181c2426/
                                 // Example JP gallery: https://exhentai.org/g/1375385/03519d541b/

@@ -82,6 +82,7 @@ import exh.log.xLogE
 import exh.source.isEhBasedSource
 import exh.util.defaultReaderType
 import exh.util.mangaType
+import exh.util.seconds
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -99,9 +100,6 @@ import timber.log.Timber
 import uy.kohesive.injekt.injectLazy
 import java.io.File
 import kotlin.math.abs
-import kotlin.time.ExperimentalTime
-import kotlin.time.seconds
-
 /**
  * Activity containing the reader of Tachiyomi. This activity is mostly a container of the
  * viewers, to which calls from the presenter or UI events are delegated.
@@ -236,7 +234,6 @@ class ReaderActivity : BaseRxActivity<ReaderActivityBinding, ReaderPresenter>() 
         }
     }
 
-    @OptIn(ExperimentalTime::class)
     private fun setupAutoscroll(interval: Double) {
         autoScrollJob?.cancel()
         if (interval == -1.0) return
@@ -490,6 +487,45 @@ class ReaderActivity : BaseRxActivity<ReaderActivityBinding, ReaderPresenter>() 
             }
         }
 
+        // Crop borders
+        with(binding.actionCropBorders) {
+            setTooltip(R.string.pref_crop_borders)
+
+            setOnClickListener {
+                // SY -->
+                val mangaViewer = presenter.getMangaReadingMode()
+                // SY <--
+                val isPagerType = ReadingModeType.isPagerType(mangaViewer)
+                val enabled = if (isPagerType) {
+                    preferences.cropBorders().toggle()
+                } else {
+                    // SY -->
+                    if (ReadingModeType.fromPreference(mangaViewer) == ReadingModeType.CONTINUOUS_VERTICAL) {
+                        preferences.cropBordersContinuousVertical().toggle()
+                    } else {
+                        preferences.cropBordersWebtoon().toggle()
+                    }
+                    // SY <--
+                }
+
+                menuToggleToast?.cancel()
+                menuToggleToast = toast(
+                    if (enabled) {
+                        R.string.on
+                    } else {
+                        R.string.off
+                    }
+                )
+            }
+        }
+        updateCropBordersShortcut()
+        listOf(preferences.cropBorders(), preferences.cropBordersWebtoon() /* SY --> */, preferences.cropBordersContinuousVertical()/* SY <-- */)
+            .forEach { pref ->
+                pref.asFlow()
+                    .onEach { updateCropBordersShortcut() }
+                    .launchIn(lifecycleScope)
+            }
+
         // Rotation
         with(binding.actionRotation) {
             setTooltip(R.string.rotation_type)
@@ -511,34 +547,6 @@ class ReaderActivity : BaseRxActivity<ReaderActivityBinding, ReaderPresenter>() 
                 }
             }
         }
-
-        // Crop borders
-        with(binding.actionCropBorders) {
-            setTooltip(R.string.pref_crop_borders)
-
-            setOnClickListener {
-                val mangaViewer = presenter.getMangaReadingMode()
-                val isPagerType = ReadingModeType.isPagerType(mangaViewer)
-                if (isPagerType) {
-                    preferences.cropBorders().toggle()
-                } else {
-                    // SY -->
-                    if (ReadingModeType.fromPreference(mangaViewer) == ReadingModeType.CONTINUOUS_VERTICAL) {
-                        preferences.cropBordersContinuousVertical().toggle()
-                    } else {
-                        preferences.cropBordersWebtoon().toggle()
-                    }
-                    // SY <--
-                }
-            }
-        }
-        updateCropBordersShortcut()
-        listOf(preferences.cropBorders(), preferences.cropBordersWebtoon() /* SY --> */, preferences.cropBordersContinuousVertical()/* SY <-- */)
-            .forEach { pref ->
-                pref.asFlow()
-                    .onEach { updateCropBordersShortcut() }
-                    .launchIn(lifecycleScope)
-            }
 
         // Settings sheet
         with(binding.actionSettings) {
@@ -1161,7 +1169,7 @@ class ReaderActivity : BaseRxActivity<ReaderActivityBinding, ReaderPresenter>() 
      */
     @SuppressLint("SetTextI18n")
     fun onPageSelected(page: ReaderPage, hasExtraPage: Boolean = false) {
-        val newChapter = presenter.onPageSelected(page)
+        val newChapter = presenter.onPageSelected(page, hasExtraPage)
         val pages = page.chapter.pages ?: return
 
         val currentPage = if (hasExtraPage) {

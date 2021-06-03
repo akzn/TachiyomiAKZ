@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Looper
 import android.view.Gravity
+import android.view.Menu
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
@@ -167,9 +168,13 @@ class MainActivity : BaseViewBindingActivity<MainActivityBinding>() {
         }
 
         if (binding.sideNav != null) {
-            preferences.showSideNavOnBottom()
+            preferences.sideNavIconAlignment()
                 .asImmediateFlow {
-                    binding.sideNav?.menuGravity = if (!it) Gravity.TOP else Gravity.BOTTOM
+                    binding.sideNav?.menuGravity = when (it) {
+                        1 -> Gravity.CENTER
+                        2 -> Gravity.BOTTOM
+                        else -> Gravity.TOP
+                    }
                 }
                 .launchIn(lifecycleScope)
         }
@@ -301,7 +306,7 @@ class MainActivity : BaseViewBindingActivity<MainActivityBinding>() {
 
         // SY -->
         preferences.bottomBarLabels()
-            .asImmediateFlow { setBottomNavLabelVisibility() }
+            .asImmediateFlow { setNavLabelVisibility() }
             .launchIn(lifecycleScope)
         // SY <--
     }
@@ -525,10 +530,9 @@ class MainActivity : BaseViewBindingActivity<MainActivityBinding>() {
             if (visible) {
                 if (collapse) {
                     bottomNavAnimator?.expand()
-                    val navUpdates = it.menu.findItem(R.id.nav_updates)
-                    navUpdates.isVisible = !preferences.hideUpdatesButton().get()
-                    val navHistory = it.menu.findItem(R.id.nav_history)
-                    navHistory.isVisible = !preferences.hideHistoryButton().get()
+                    // SY -->
+                    updateNavMenu(it.menu)
+                    // SY <--
                 }
 
                 bottomViewNavigationBehavior?.slideUp(it)
@@ -545,8 +549,18 @@ class MainActivity : BaseViewBindingActivity<MainActivityBinding>() {
     private fun showSideNav(visible: Boolean) {
         binding.sideNav?.let {
             it.isVisible = visible
+            // SY -->
+            updateNavMenu(it.menu)
+            // SY <--
         }
     }
+
+    // SY -->
+    private fun updateNavMenu(menu: Menu) {
+        menu.findItem(R.id.nav_updates).isVisible = preferences.showNavUpdates().get()
+        menu.findItem(R.id.nav_history).isVisible = preferences.showNavHistory().get()
+    }
+    // SY <--
 
     /**
      * Used to manually offset a view within the activity's child views that might be cut off due to
@@ -580,13 +594,11 @@ class MainActivity : BaseViewBindingActivity<MainActivityBinding>() {
     private val nav: NavigationBarView
         get() = binding.bottomNav ?: binding.sideNav!!
 
-    private fun setBottomNavLabelVisibility() {
-        binding.bottomNav?.let {
-            if (preferences.bottomBarLabels().get()) {
-                it.labelVisibilityMode = NavigationBarView.LABEL_VISIBILITY_LABELED
-            } else {
-                it.labelVisibilityMode = NavigationBarView.LABEL_VISIBILITY_SELECTED
-            }
+    private fun setNavLabelVisibility() {
+        if (preferences.bottomBarLabels().get()) {
+            nav.labelVisibilityMode = NavigationBarView.LABEL_VISIBILITY_LABELED
+        } else {
+            nav.labelVisibilityMode = NavigationBarView.LABEL_VISIBILITY_SELECTED
         }
     }
 

@@ -40,8 +40,9 @@ operator fun <T> Preference<Set<T>>.minusAssign(item: T) {
     set(get() - item)
 }
 
-fun Preference<Boolean>.toggle() {
+fun Preference<Boolean>.toggle(): Boolean {
     set(!get())
+    return get()
 }
 
 class PreferencesHelper(val context: Context) {
@@ -67,7 +68,7 @@ class PreferencesHelper(val context: Context) {
 
     fun hideBottomBarOnScroll() = flowPrefs.getBoolean(Keys.hideBottomBarOnScroll, true)
 
-    fun showSideNavOnBottom() = flowPrefs.getBoolean(Keys.showSideNavOnBottom, false)
+    fun sideNavIconAlignment() = flowPrefs.getInt(Keys.sideNavIconAlignment, 0)
 
     fun useAuthenticator() = flowPrefs.getBoolean(Keys.useAuthenticator, false)
 
@@ -84,8 +85,6 @@ class PreferencesHelper(val context: Context) {
     fun autoUpdateTrackers() = prefs.getBoolean(Keys.autoUpdateTrackers, false)
 
     fun showLibraryUpdateErrors() = prefs.getBoolean(Keys.showLibraryUpdateErrors, false)
-
-    fun clear() = prefs.edit { clear() }
 
     fun themeMode() = flowPrefs.getEnum(Keys.themeMode, Values.ThemeMode.system)
 
@@ -475,6 +474,8 @@ class PreferencesHelper(val context: Context) {
 
     fun authenticatorTimeRanges() = flowPrefs.getStringSet(Keys.authenticatorTimeRanges, mutableSetOf())
 
+    fun authenticatorDays() = flowPrefs.getInt(Keys.authenticatorDays, 0x7F)
+
     fun sortTagsForLibrary() = flowPrefs.getStringSet(Keys.sortTagsForLibrary, mutableSetOf())
 
     fun dontDeleteFromCategories() = flowPrefs.getStringSet(Keys.dontDeleteFromCategories, emptySet())
@@ -493,9 +494,9 @@ class PreferencesHelper(val context: Context) {
 
     fun bottomBarLabels() = flowPrefs.getBoolean(Keys.bottomBarLabels, true)
 
-    fun hideUpdatesButton() = flowPrefs.getBoolean(Keys.hideUpdatesButton, false)
+    fun showNavUpdates() = flowPrefs.getBoolean(Keys.showNavUpdates, true)
 
-    fun hideHistoryButton() = flowPrefs.getBoolean(Keys.hideHistoryButton, false)
+    fun showNavHistory() = flowPrefs.getBoolean(Keys.showNavHistory, true)
 
     fun pageLayout() = flowPrefs.getInt(Keys.pageLayout, PagerConfig.PageLayout.AUTOMATIC)
 
