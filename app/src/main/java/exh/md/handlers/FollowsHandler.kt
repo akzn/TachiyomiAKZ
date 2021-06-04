@@ -135,7 +135,7 @@ class FollowsHandler(
         return withIOContext {
             val status = when (followStatus == FollowStatus.UNFOLLOWED) {
                 true -> null
-                false -> followStatus.name.toLowerCase(Locale.US)
+                false -> followStatus.name.lowercase(Locale.US)
             }
 
             val jsonString = MdUtil.jsonParser.encodeToString(UpdateReadingStatus(status))
@@ -153,9 +153,9 @@ class FollowsHandler(
         }
     }
 
-    suspend fun updateReadingProgress(track: Track): Boolean {
+    /*suspend fun updateReadingProgress(track: Track): Boolean {
         return true
-        /*return withIOContext {
+        return withIOContext {
             val mangaID = getMangaId(track.tracking_url)
             val formBody = FormBody.Builder()
                 .add("volume", "0")
@@ -179,12 +179,12 @@ class FollowsHandler(
                 }
             }
             result.isSuccess
-        }*/
+        }
     }
 
     suspend fun updateRating(track: Track): Boolean {
         return true
-        /*return withIOContext {
+        return withIOContext {
             val mangaID = getMangaId(track.tracking_url)
             val result = runCatching {
                 client.newCall(
@@ -205,8 +205,8 @@ class FollowsHandler(
                 }
             }
             result.isSuccess
-        }*/
-    }
+        }
+    }*/
 
     /**
      * fetch all manga from all possible pages
@@ -247,7 +247,7 @@ class FollowsHandler(
         val mangaStatusUrl = MdUtil.mangaStatus.toHttpUrl().newBuilder()
 
         if (status != null) {
-            mangaStatusUrl.addQueryParameter("status", status.name.toLowerCase(Locale.US))
+            mangaStatusUrl.addQueryParameter("status", status.name.lowercase(Locale.US))
         }
 
         return GET(mangaStatusUrl.build().toString(), MdUtil.getAuthHeaders(headers, preferences, mdList), CacheControl.FORCE_NETWORK)

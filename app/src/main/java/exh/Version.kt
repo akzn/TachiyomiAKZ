@@ -1,1 +1,1 @@
-package exh const val syDebugVersion: String = "3"
+package exh const val syDebugVersion: String = "2"

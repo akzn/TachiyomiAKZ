@@ -62,7 +62,7 @@ class RecommendsController(
         val item = adapter?.getItem(position) as? SourceItem ?: return false
 
         // --> akz
-        if (preferences.isLastSourceRecsEnabled().get()) {
+        if (preferences.isLastSourceRecsEnabled().get() && preferences.lastUsedSource().get() > -1) {
             Timber.d("latestAsRecsSourcePreference : ${preferences.isLastSourceRecsEnabled().get()}")
             Timber.d("lastest source : ${preferences.lastUsedSource().get()}")
 

@@ -231,7 +231,7 @@ class SourceController(bundle: Bundle? = null) :
     }
 
     private fun addToCategories(source: Source) {
-        val categories = preferences.sourcesTabCategories().get().toList().sortedBy { it.toLowerCase() }
+        val categories = preferences.sourcesTabCategories().get().toList().sortedBy { it.lowercase() }
 
         if (categories.isEmpty()) {
             applicationContext?.toast(R.string.no_source_categories)
@@ -386,7 +386,7 @@ class SourceController(bundle: Bundle? = null) :
             createOptionsMenu(
                 menu,
                 inflater,
-                R.menu.source_main,
+                R.menu.browse_sources,
                 R.id.action_search,
                 R.string.action_global_search_hint,
                 false // GlobalSearch handles the searching here

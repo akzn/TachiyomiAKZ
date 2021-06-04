@@ -15,7 +15,7 @@ object PreferenceKeys {
 
     const val hideBottomBarOnScroll = "pref_hide_bottom_bar_on_scroll"
 
-    const val showSideNavOnBottom = "pref_show_side_nav_on_bottom"
+    const val sideNavIconAlignment = "pref_side_nav_icon_alignment"
 
     const val enableTransitionsPager = "pref_enable_transitions_pager_key"
 
@@ -365,6 +365,8 @@ object PreferenceKeys {
 
     const val authenticatorTimeRanges = "biometric_time_ranges"
 
+    const val authenticatorDays = "biometric_days"
+
     const val sortTagsForLibrary = "sort_tags_for_library"
 
     const val dontDeleteFromCategories = "dont_delete_from_categories"
@@ -383,9 +385,9 @@ object PreferenceKeys {
 
     const val bottomBarLabels = "pref_show_bottom_bar_labels"
 
-    const val hideUpdatesButton = "pref_hide_updates_button"
+    const val showNavUpdates = "pref_show_updates_button"
 
-    const val hideHistoryButton = "pref_hide_history_button"
+    const val showNavHistory = "pref_show_history_button"
 
     const val pageLayout = "page_layout"
 

@@ -3,8 +3,8 @@
 | [![Preview](https://github.com/jobobby04/TachiyomiSYPreview/workflows/Remote%20Dispatch%20Build%20App/badge.svg)](https://github.com/jobobby04/TachiyomiSYPreview/releases) | [![stable release](https://img.shields.io/github/release/jobobby04/tachiyomisy.svg?maxAge=3600&label=download)](https://github.com/jobobby04/tachiyomisy/releases/latest) | [![Discord](https://img.shields.io/discord/349436576037732353.svg?label=discord&labelColor=7289da&color=2c2f33&style=flat)](https://discord.gg/tachiyomi) |
 
 
-# ![app icon](./.github/readme-images/app-icon.png)TachiyomiAKZ
-Tachiyomi is a free and open source manga reader for Android 5.0 and above. This version of Tachiyomi, TachiyomiAKZ was based off TachiyomiSY. Tries to push forward where it can, but staying in a place where it can easily grab updates and features from the main app.
+# ![app icon](./.github/readme-images/app-icon.png)TachiyomiSY
+Tachiyomi is a free and open source manga reader for Android 6.0 and above. This version of Tachiyomi, TachiyomiSY was based off TachiyomiAZ. This version is meant to push forward in the ways of usability and features. TachiyomiSY tries to push forward where it can, but staying in a place where it can easily grab updates and features from the main app, it tries to make new features, or take features from other forks like J2K and Neko.
 
 ![screenshots of app](./.github/readme-images/screens.png)
 
@@ -51,9 +51,6 @@ Features of TachiyomiSY include:
 * New E-Hentai/ExHentai features, such as language settings and watched list settings
 * Enhanced views for internal and integrated sources
 * Enhanced usability for internal and delegated sources
-
-Feature AKZ :
-* Toggle to choose last used source as base search for clicked item from recommended manga.
 
 Custom sources:
 * E-Hentai/ExHentai
