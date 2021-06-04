@@ -1,8 +1,8 @@
+
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.io.ByteArrayOutputStream
 import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.TimeZone
+import java.util.*
 
 plugins {
     id("com.android.application")
@@ -65,8 +65,8 @@ android {
             setProguardFiles(listOf(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"))
         }
         named("release") {
-            isMinifyEnabled = true
-            isShrinkResources = true
+            //isMinifyEnabled = true
+            //isShrinkResources = true
             setProguardFiles(listOf(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"))
         }
     }
