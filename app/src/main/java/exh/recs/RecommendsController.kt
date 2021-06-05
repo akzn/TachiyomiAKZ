@@ -52,6 +52,7 @@ class RecommendsController(
         menu.findItem(R.id.action_search).isVisible = false
         menu.findItem(R.id.action_open_in_web_view).isVisible = false
         menu.findItem(R.id.action_settings).isVisible = false
+        menu.findItem(R.id.action_last_source_recs).isVisible = true
     }
 
     override fun initFilterSheet() {

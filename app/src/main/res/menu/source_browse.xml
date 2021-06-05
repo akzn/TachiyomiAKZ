@@ -54,4 +54,11 @@
         app:iconTint="?attr/colorOnPrimary"
         app:showAsAction="ifRoom" />
 
+    <item
+        android:id="@+id/action_last_source_recs"
+        android:icon="@drawable/ic_settings_24dp"
+        android:title="@string/action_last_source_recs"
+        app:iconTint="?attr/colorOnPrimary"
+        app:showAsAction="ifRoom" />
+
 </menu>

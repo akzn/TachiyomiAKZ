@@ -728,4 +728,8 @@
     </plurals>
     <string name="humanize_fallback">moments ago</string>
 
+    <!-- AKZN -->
+    <!--    Recs Menu -->
+    <string name="action_last_source_recs">Last Source Setting</string>
+    <!-- <- AKZN   -->
 </resources>

@@ -2,12 +2,7 @@ package eu.kanade.tachiyomi.ui.browse.source.browse
 
 import android.content.res.Configuration
 import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.Menu
-import android.view.MenuInflater
-import android.view.MenuItem
-import android.view.View
-import android.view.ViewGroup
+import android.view.*
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
 import androidx.recyclerview.widget.GridLayoutManager
@@ -16,6 +11,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.afollestad.materialdialogs.MaterialDialog
 import com.afollestad.materialdialogs.input.input
 import com.afollestad.materialdialogs.list.listItems
+import com.afollestad.materialdialogs.list.listItemsSingleChoice
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
 import com.google.android.material.snackbar.Snackbar
 import com.tfcporciuncula.flow.Preference
@@ -445,6 +441,9 @@ open class BrowseSourceController(bundle: Bundle) :
         // SY -->
         menu.findItem(R.id.action_settings).isVisible = presenter.source is ConfigurableSource
         // SY <--
+        // AKZ -->
+        menu.findItem(R.id.action_last_source_recs).isVisible = false
+        // AKZ <--
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -461,6 +460,9 @@ open class BrowseSourceController(bundle: Bundle) :
             R.id.action_settings -> openSourceSettings()
             // SY <--
             R.id.action_local_source_help -> openLocalSourceHelpGuide()
+            // akz -->
+            R.id.action_last_source_recs -> openLastSourceRecsDialog()
+            // akz <--
         }
         return super.onOptionsItemSelected(item)
     }
@@ -484,6 +486,26 @@ open class BrowseSourceController(bundle: Bundle) :
         )
     }
     // SY <--
+
+    // AKZ -->
+    private fun openLastSourceRecsDialog() {
+        MaterialDialog(activity!!)
+            .title(R.string.action_last_source_recs)
+            .listItemsSingleChoice(
+                items = listOf(
+                    "Use Last Used Source",
+                    "Use Source List Page"
+                ),
+                initialSelection = if (preferences.isLastSourceRecsEnabled().get()) 0 else 1
+            ) { _, index, _ ->
+                when (index) {
+                    0 -> preferences.isLastSourceRecsEnabled().set(true)
+                    1 -> preferences.isLastSourceRecsEnabled().set(false)
+                }
+            }
+            .show()
+    }
+    // AKZ <--
 
     /**
      * Restarts the request with a new query.
